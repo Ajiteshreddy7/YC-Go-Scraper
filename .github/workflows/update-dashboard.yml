@@ -13,36 +13,37 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Use a standard Linux virtual machine
+    runs-on: ubuntu-latest
+
+    # --- ADD THIS PERMISSIONS BLOCK ---
+    # This gives the GITHUB_TOKEN write permission to the repository contents
+    permissions:
+      contents: write
+    # ------------------------------------
 
     steps:
-      # Step 1: Check out a copy of your repository
+      # (The rest of your steps stay exactly the same)
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      # Step 2: Set up a Python environment
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10' # Specify Python version
+          python-version: '3.10'
 
-      # Step 3: Install the necessary Python libraries
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install supabase pandas
 
-      # Step 4: Run the dashboard generator script
-      # It uses the secrets we will set up in the repository settings
       - name: Generate Dashboard
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python dashboard_generator.py
 
-      # Step 5: Commit the updated index.html file back to the repository
       - name: Commit and Push Changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'docs: Update job dashboard'
-          file_pattern: 'index.html' 
+          file_pattern: 'index.html'
