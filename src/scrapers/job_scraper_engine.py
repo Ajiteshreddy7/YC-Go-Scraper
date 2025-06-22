@@ -244,7 +244,13 @@ def should_process_job(job_details, config):
         return False
     
     title = job_details.get('Title', '').lower()
-    location = job_details.get('Location', '').lower()
+    location = job_details.get('Location', '')
+    
+    # Handle None location
+    if location is None:
+        location = ''
+    else:
+        location = location.lower()
     
     # Get targeting config
     targeting = config.get('targeting', {})
@@ -679,26 +685,27 @@ def main():
         for url in unique_urls:
             print("-" * 40)
             print(f"Processing URL: {url}")
-            
-            if check_if_job_exists(url):
-                print("Job already exists in the database. Skipping.")
-                continue
-            
-            page_text = get_page_text(url)  # This function uses trafilatura
-            if page_text:
-                job_details = extract_details_with_gemini(page_text, url)  # Gemini does the hard work
-                if job_details:
-                    # Apply targeting filters before saving
-                    if should_process_job(job_details, config):
-                        if save_to_supabase(job_details):
-                            processed_count += 1
-                        time.sleep(2)  # Be respectful and add a small delay
+            try:
+                if check_if_job_exists(url):
+                    print("Job already exists in the database. Skipping.")
+                    continue
+                page_text = get_page_text(url)  # This function uses trafilatura
+                if page_text:
+                    job_details = extract_details_with_gemini(page_text, url)  # Gemini does the hard work
+                    if job_details:
+                        # Apply targeting filters before saving
+                        if should_process_job(job_details, config):
+                            if save_to_supabase(job_details):
+                                processed_count += 1
+                            time.sleep(2)  # Be respectful and add a small delay
+                        else:
+                            print(f"⏭️ Skipping job due to targeting filters")
                     else:
-                        print(f"⏭️ Skipping job due to targeting filters")
+                        print(f"❌ Could not extract job details from {url}")
                 else:
-                    print(f"❌ Could not extract job details from {url}")
-            else:
-                print(f"❌ Could not extract text from {url}")
+                    print(f"❌ Could not extract text from {url}")
+            except Exception as e:
+                print(f"❌ Unexpected error processing {url}: {e}")
     
     print(f"\n🎉 Scraping Complete!")
     print(f"📈 Total new jobs found from job boards: {total_new_jobs}")
