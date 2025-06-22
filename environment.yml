@@ -9,4 +9,8 @@ dependencies:
   - pandas>=2.0.0
   - pip
   - pip:
-    - google-generativeai>=0.3.0 
+    - google-generativeai>=0.3.0
+    - trafilatura>=2.0.0
+    - selenium>=4.0.0
+    - webdriver-manager>=4.0.0
+    - supabase>=2.0.0 

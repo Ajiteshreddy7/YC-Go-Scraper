@@ -1,7 +1,7 @@
 # Universal Job Tracker Setup Guide
 
 ## Overview
-This upgraded job tracker uses Google's Gemini AI to extract job details from any website, making it much more flexible than traditional web scraping methods.
+This upgraded job tracker uses Google's Gemini AI to extract job details from any website, making it much more flexible than traditional web scraping methods. **Version 2.0 includes improved text extraction and enhanced AI prompts for better accuracy.**
 
 ## Prerequisites
 
@@ -89,10 +89,18 @@ pip install -r requirements.txt
 
 ## How It Works
 
-1. **Generic Content Fetch**: The script fetches all readable text from any job posting URL
-2. **AI-Powered Extraction**: Gemini AI analyzes the text and extracts key job details
+1. **Smart Content Fetch**: Uses `trafilatura` to extract only the main content, filtering out navigation, footers, and boilerplate
+2. **AI-Powered Extraction**: Gemini AI analyzes the clean text and extracts key job details with enhanced accuracy
 3. **Structured Output**: Data is returned in JSON format and saved to CSV
 4. **Universal Compatibility**: Works with LinkedIn, Indeed, Google Careers, and any other job board
+
+## Key Improvements in v2.0
+
+- ✅ **Better Text Extraction**: Uses `trafilatura` library to focus on main content only
+- ✅ **Enhanced AI Prompt**: More detailed instructions for better accuracy
+- ✅ **Improved Error Handling**: Better handling of edge cases
+- ✅ **Salary Detection**: Better extraction of salary information from various formats
+- ✅ **Job Type Recognition**: More accurate identification of employment types
 
 ## Features
 
@@ -102,6 +110,7 @@ pip install -r requirements.txt
 - ✅ Handles errors gracefully
 - ✅ Secure API key management
 - ✅ Isolated conda environment
+- ✅ Smart content filtering (removes boilerplate)
 
 ## Troubleshooting
 
@@ -118,6 +127,11 @@ pip install -r requirements.txt
 - Verify your API key is valid
 - Check your internet connection
 - The free tier has rate limits - wait a moment and try again
+
+### "Trafilatura could not extract main content"
+- Some websites may have complex layouts
+- Try a different job posting URL
+- The script will still attempt to process with available content
 
 ### Conda Environment Issues
 - Make sure conda is installed on your system

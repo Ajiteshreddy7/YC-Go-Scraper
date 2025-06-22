@@ -1,16 +1,14 @@
 #
-# Universal Job Application Tracker - v2.0
-# This script uses Google's Gemini AI to extract job details from any URL
-# and saves them to a CSV file.
+# Universal Job Application Tracker - v3.0 (with Database)
+# This script uses Gemini AI to extract job details and saves them to a Supabase database.
 #
 
-import requests
-from bs4 import BeautifulSoup
-import pandas as pd
 import os
-import google.generativeai as genai
 import json
+import pandas as pd
+import google.generativeai as genai
 import trafilatura
+from supabase import create_client, Client
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -19,26 +17,53 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+import requests
+from bs4 import BeautifulSoup
 
 # --- CONFIGURATION ---
-# The name of the CSV file where we'll store the job data.
-CSV_FILE = 'job_applications.csv'
-
-# IMPORTANT: Set up your API Key
-# 1. Get your key from https://aistudio.google.com/app/apikey
-# 2. In your terminal, set the environment variable:
-#    For Mac/Linux: export GOOGLE_API_KEY='YOUR_API_KEY'
-#    For Windows: set GOOGLE_API_KEY='YOUR_API_KEY'
-# 3. The script will read the key from the environment.
 try:
-    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-except KeyError:
-    print("="*50)
-    print("ERROR: GOOGLE_API_KEY environment variable not found.")
-    print("Please set the environment variable with your API key.")
-    print("="*50)
+    # Gemini AI Configuration
+    google_api_key = os.environ.get("GOOGLE_API_KEY")
+    if not google_api_key:
+        raise KeyError("GOOGLE_API_KEY")
+    genai.configure(api_key=google_api_key)
+    
+    # Supabase Configuration
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_KEY")
+    
+    if not supabase_url:
+        raise KeyError("SUPABASE_URL")
+    if not supabase_key:
+        raise KeyError("SUPABASE_KEY")
+        
+    supabase: Client = create_client(supabase_url, supabase_key)
+    
+except KeyError as e:
+    print("="*60)
+    print("ERROR: Missing required environment variable!")
+    print(f"Missing: {e}")
+    print("="*60)
+    print("Please set the following environment variables:")
+    print("")
+    print("For Windows (PowerShell):")
+    print('$env:GOOGLE_API_KEY="YOUR_GEMINI_API_KEY"')
+    print('$env:SUPABASE_URL="YOUR_SUPABASE_URL"')
+    print('$env:SUPABASE_KEY="YOUR_SUPABASE_ANON_KEY"')
+    print("")
+    print("For Windows (Command Prompt):")
+    print('set GOOGLE_API_KEY=YOUR_GEMINI_API_KEY')
+    print('set SUPABASE_URL=YOUR_SUPABASE_URL')
+    print('set SUPABASE_KEY=YOUR_SUPABASE_ANON_KEY')
+    print("")
+    print("For macOS/Linux:")
+    print('export GOOGLE_API_KEY="YOUR_GEMINI_API_KEY"')
+    print('export SUPABASE_URL="YOUR_SUPABASE_URL"')
+    print('export SUPABASE_KEY="YOUR_SUPABASE_ANON_KEY"')
+    print("")
+    print("Replace the placeholder values with your actual credentials.")
+    print("="*60)
     exit()
-
 
 def get_page_text(url):
     """
@@ -266,6 +291,7 @@ def extract_details_with_gemini(text_content, url):
             else:
                 raise ValueError("No valid JSON found in response")
         
+        # This dictionary structure now matches our database columns!
         job_details = {
             'Title': details.get('job_title'),
             'Company': details.get('company_name'),
@@ -273,8 +299,8 @@ def extract_details_with_gemini(text_content, url):
             'Salary': details.get('salary_range'),
             'Type': details.get('job_type'),
             'URL': url,
-            'Status': 'Not Applied',
-            'Date Added': pd.to_datetime('today').strftime('%Y-%m-%d')
+            'Date Added': pd.to_datetime('today').strftime('%Y-%m-%d %H:%M:%S'),
+            # The 'Status' will be set by the database default value.
         }
         return job_details
 
@@ -285,27 +311,62 @@ def extract_details_with_gemini(text_content, url):
             print(f"Raw AI Response:\n{response.text[:500]}...")
         return None
 
-
-def save_to_csv(job_details):
+def save_to_supabase(job_details):
     """
-    Saves the job details dictionary to a CSV file.
+    Saves the job details dictionary to the Supabase database.
+
+    Args:
+        job_details (dict): The dictionary of job information to save.
     """
-    # Define the order of columns for the CSV
-    columns = ['Date Added', 'Company', 'Title', 'Location', 'Salary', 'Type', 'Status', 'URL']
-    df = pd.DataFrame([job_details])
-    df = df[columns] # Ensure columns are in the correct order
+    try:
+        print(f"Attempting to save job details: {job_details}")
+        
+        # The table name is 'job_applications' as we defined it
+        data, count = supabase.table('job_applications').insert(job_details).execute()
+        print("\nSuccess! Job details saved to the database.")
+        print(f"Response: {data}")
+        
+    except Exception as e:
+        print(f"\nError saving to Supabase: {e}")
+        
+        # Try to get more detailed error information
+        if hasattr(e, 'message'):
+            print(f"Error message: {e.message}")
+        if hasattr(e, 'code'):
+            print(f"Error code: {e.code}")
+            
+        # Check if it's a duplicate URL issue
+        if "duplicate" in str(e).lower() or "unique" in str(e).lower():
+            print("This appears to be a duplicate URL issue.")
+        elif "row-level security" in str(e).lower():
+            print("This appears to be a Row Level Security issue.")
+        else:
+            print("This might be a data format or column name issue.")
+            
+        # Try to validate the data structure
+        print(f"\nData being sent: {job_details}")
+        print("Expected columns: Title, Company, Location, Salary, Type, URL")
 
-    if not os.path.exists(CSV_FILE):
-        df.to_csv(CSV_FILE, index=False, mode='w')
-        print(f"\nSuccess! '{CSV_FILE}' created and job details saved.")
-    else:
-        df.to_csv(CSV_FILE, index=False, mode='a', header=False)
-        print(f"\nSuccess! Job details appended to '{CSV_FILE}'.")
-
+def check_if_job_exists(url):
+    """
+    Checks if a job with the given URL already exists in the database.
+    
+    Returns:
+        bool: True if the job exists, False otherwise.
+    """
+    try:
+        data, count = supabase.table('job_applications').select('id').eq('URL', url).execute()
+        # If data is returned, it means we found at least one match
+        if data and len(data[1]) > 0:
+            return True
+        return False
+    except Exception as e:
+        print(f"Error checking for existing job: {e}")
+        return False # Assume it doesn't exist if we can't check
 
 def main():
     """Main function to run the universal job tracker."""
-    print("--- Universal AI Job Tracker (v2.0) ---")
+    print("--- Universal AI Job Tracker (v3.0) ---")
     
     while True:
         url = input("\nEnter a job URL from any website (or type 'exit' to quit): ")
@@ -316,17 +377,22 @@ def main():
         if not url.startswith(('http://', 'https://')):
             print("Please enter a valid URL (e.g., https://...)")
             continue
-            
-        print("\nStep 1: Fetching page content...")
+        
+        print("\nStep 1: Checking if job already exists in database...")
+        if check_if_job_exists(url):
+            print("This job is already in your database. Skipping.")
+            continue
+
+        print("Step 2: Fetching page content...")
         page_text = get_page_text(url)
         
         if page_text:
-            print("Step 2: Asking Gemini AI to extract details...")
+            print("Step 3: Asking Gemini AI to extract details...")
             job_details = extract_details_with_gemini(page_text, url)
             
             if job_details:
-                print("Step 3: Saving to your spreadsheet...")
-                save_to_csv(job_details)
+                print("Step 4: Saving to your Supabase database...")
+                save_to_supabase(job_details)
 
     print("\nHappy job hunting!")
 
