@@ -8,10 +8,10 @@ name: Job Scraper Engine
 # 'workflow_dispatch' allows you to run it manually from the Actions tab.
 # 'schedule' runs it automatically every 30 minutes during business hours
 on:
-  workflow_dispatch:
-  schedule:
-    # Run every 30 minutes from 9 AM to 6 PM UTC (business hours)
-    - cron: '0,30 9-18 * * 1-5'  # Monday-Friday, 9 AM - 6 PM UTC
+  # workflow_dispatch:
+  # schedule:
+  #   # Run every 30 minutes from 9 AM to 6 PM UTC (business hours)
+  #   - cron: '0,30 9-18 * * 1-5'  # Monday-Friday, 9 AM - 6 PM UTC
 
 jobs:
   scrape-jobs:
