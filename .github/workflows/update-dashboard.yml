@@ -6,8 +6,8 @@ name: Update Job Dashboard
 # Controls when the action will run.
 on:
   workflow_dispatch: # Allows you to run it manually from the Actions tab
-  schedule:
-    - cron: '0 4 * * *' # Runs at 4 AM UTC every day
+  # schedule:
+  #   - cron: '0 4 * * *' # Runs at 4 AM UTC every day
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
