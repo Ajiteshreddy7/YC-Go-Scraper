@@ -1,0 +1,30 @@
+name: Scheduled Scrape
+
+on:
+  schedule:
+    - cron: "0 3 * * *"  # daily at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: go-scraper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21.x"
+      - name: Build scraper
+        run: go build ./cmd/scraper
+      - name: Run scraper
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          LOG_LEVEL: INFO
+        run: ./scraper --config ../config/scraper_config.json --out ../data/job_applications.csv
+      - name: Upload CSV artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: job_applications.csv
+          path: data/job_applications.csv
