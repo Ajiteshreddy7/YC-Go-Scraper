@@ -79,129 +79,155 @@ func deriveLevels(title string) []string {
 const indexHTML = `<!DOCTYPE html>
 <html>
 <head>
-    <title>Job Opportunities Tracker</title>
+    <title>Job Opportunities Finder</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
-        h1 { color: #343a40; text-align: center; margin-bottom: 30px; }
-        .stats { display: flex; justify-content: space-around; margin-bottom: 30px; flex-wrap: wrap; gap: 15px; }
-        .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; min-width: 150px; }
-        .stat-number { font-size: 2em; font-weight: bold; color: #007bff; }
-        .stat-label { color: #6c757d; margin-top: 5px; }
-        .filters { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
-        .filter-row label { font-weight: 600; color: #495057; min-width: 100px; }
-        input[type="text"], select { padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; flex: 1; min-width: 200px; }
-        .level-checkboxes { display: flex; flex-wrap: wrap; gap: 15px; }
-        .level-checkboxes label { display: flex; align-items: center; gap: 5px; }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+        h1 { color: #343a40; text-align: center; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #6c757d; margin-bottom: 30px; }
+        .filters { background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .filter-section { margin-bottom: 20px; }
+        .filter-label { font-weight: 600; color: #495057; margin-bottom: 8px; display: block; }
+        .filter-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        input[type="text"], select { padding: 10px 12px; border: 1px solid #ced4da; border-radius: 6px; flex: 1; min-width: 200px; font-size: 14px; }
+        .level-checkboxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 10px; }
+        .level-checkboxes label { display: flex; align-items: center; gap: 6px; padding: 8px; background: #f8f9fa; border-radius: 4px; cursor: pointer; }
+        .level-checkboxes input[type="checkbox"] { cursor: pointer; }
+        .action-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        button { background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; }
         button:hover { background: #0069d9; }
-        .jobs-table { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
-        th { background: #007bff; color: white; position: sticky; top: 0; }
-        tr:hover { background: #f8f9fa; }
-        a { color: #007bff; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .status-not-applied { color: #dc3545; font-weight: bold; }
-        .status-applied { color: #28a745; font-weight: bold; }
-        .export-btn { background: #28a745; margin-left: 10px; }
-        .export-btn:hover { background: #218838; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #5a6268; }
+        .results-section { display: none; }
+        .stats { display: flex; justify-content: space-around; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .stat-card { background: white; padding: 16px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; min-width: 120px; }
+        .stat-number { font-size: 1.8em; font-weight: bold; color: #007bff; }
+        .stat-label { color: #6c757d; margin-top: 5px; font-size: 0.9em; }
+        .jobs-list { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+        .job-item { padding: 16px; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: start; gap: 15px; }
+        .job-item:hover { background: #f8f9fa; }
+        .job-item:last-child { border-bottom: none; }
+        .job-info { flex: 1; }
+        .job-title { font-weight: 600; color: #343a40; margin-bottom: 6px; font-size: 1.05em; }
+        .job-meta { color: #6c757d; font-size: 0.9em; line-height: 1.6; }
+        .job-level { display: inline-block; background: #e7f3ff; color: #0056b3; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-top: 4px; }
+        .job-actions { display: flex; flex-direction: column; gap: 8px; }
+        .btn-apply { background: #28a745; padding: 8px 16px; border-radius: 6px; text-decoration: none; color: white; font-size: 0.9em; text-align: center; white-space: nowrap; }
+        .btn-apply:hover { background: #218838; }
+        .btn-mark-applied { background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; white-space: nowrap; }
+        .btn-mark-applied:hover { background: #0069d9; }
+        .applied-badge { color: #28a745; font-weight: 600; font-size: 0.9em; white-space: nowrap; }
+        .status-applied { opacity: 0.6; }
+        .no-results { text-align: center; padding: 40px; color: #6c757d; }
+        .select-all { margin-bottom: 10px; font-weight: normal; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Job Opportunities Tracker</h1>
-        
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-number" id="total-jobs">{{.TotalJobs}}</div>
-                <div class="stat-label">Total Jobs</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="not-applied">{{.NotApplied}}</div>
-                <div class="stat-label">Not Applied</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="applied">{{.Applied}}</div>
-                <div class="stat-label">Applied</div>
-            </div>
-        </div>
+        <h1>🚀 Job Opportunities Finder</h1>
+        <div class="subtitle">Find your next opportunity from {{.TotalJobs}} early-career positions</div>
         
         <div class="filters">
-            <div class="filter-row">
-                <label>Search:</label>
-                <input type="text" id="search" placeholder="Search by title, company, location..." />
+            <div class="filter-section">
+                <label class="filter-label">Search</label>
+                <input type="text" id="search" placeholder="Search by title, company, or location..." />
             </div>
-            <div class="filter-row">
-                <label>Job Levels:</label>
+            
+            <div class="filter-section">
+                <label class="filter-label">Job Levels</label>
+                <div class="select-all">
+                    <label><input type="checkbox" id="select-all" checked> Select / Deselect All</label>
+                </div>
                 <div class="level-checkboxes" id="levels">
                     {{range .Levels}}
                     <label><input type="checkbox" value="{{.}}" checked> {{.}}</label>
                     {{end}}
                 </div>
             </div>
-            <div class="filter-row">
-                <label>Company:</label>
-                <select id="company">
-                    <option value="">All Companies</option>
-                    {{range .Companies}}
-                    <option value="{{.}}">{{.}}</option>
-                    {{end}}
-                </select>
-                <label>Location:</label>
-                <select id="location">
-                    <option value="">All Locations</option>
-                    {{range .Locations}}
-                    <option value="{{.}}">{{.}}</option>
-                    {{end}}
-                </select>
-                <label>Status:</label>
-                <select id="status">
-                    <option value="">All Statuses</option>
-                    <option value="Not Applied">Not Applied</option>
-                    <option value="Applied">Applied</option>
-                </select>
-                <button onclick="filterJobs()">Apply Filters</button>
-                <button class="export-btn" onclick="exportCSV()">Download CSV</button>
+            
+            <div class="filter-section">
+                <label class="filter-label">Filters</label>
+                <div class="filter-row">
+                    <select id="company">
+                        <option value="">All Companies</option>
+                        {{range .Companies}}
+                        <option value="{{.}}">{{.}}</option>
+                        {{end}}
+                    </select>
+                    <select id="location">
+                        <option value="">All Locations</option>
+                        {{range .Locations}}
+                        <option value="{{.}}">{{.}}</option>
+                        {{end}}
+                    </select>
+                    <select id="status">
+                        <option value="">All Statuses</option>
+                        <option value="Not Applied">Not Applied</option>
+                        <option value="Applied">Applied</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button onclick="filterJobs()">🔍 Show Jobs</button>
+                <button class="btn-secondary" onclick="resetFilters()">↻ Reset Filters</button>
+                <button class="btn-secondary" onclick="exportCSV()" style="display:none;" id="export-btn">⬇ Download CSV</button>
             </div>
         </div>
         
-        <div class="jobs-table">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Company</th>
-                        <th>Title</th>
-                        <th>Location</th>
-                        <th>Level</th>
-                        <th>Status</th>
-                        <th>Link</th>
-                    </tr>
-                </thead>
-                <tbody id="jobs-body">
-                    {{range .Jobs}}
-                    <tr data-title="{{.Title}}" data-company="{{.Company}}" data-location="{{.Location}}" data-levels="{{.Levels}}" data-status="{{.Status}}">
-                        <td>{{.DateAdded}}</td>
-                        <td>{{.Company}}</td>
-                        <td>{{.Title}}</td>
-                        <td>{{.Location}}</td>
-                        <td>{{.Levels}}</td>
-                        <td><span class="status-{{.StatusClass}}">{{.Status}}</span></td>
-                        <td><a href="{{.URL}}" target="_blank">Apply</a></td>
-                    </tr>
-                    {{end}}
-                </tbody>
-            </table>
+        <div class="results-section" id="results">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="filtered-count">0</div>
+                    <div class="stat-label">Matching Jobs</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="not-applied-count">0</div>
+                    <div class="stat-label">Not Applied</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="applied-count">0</div>
+                    <div class="stat-label">Applied</div>
+                </div>
+            </div>
+            
+            <div class="jobs-list" id="jobs-list">
+                <div class="no-results">Click "Show Jobs" to see results</div>
+            </div>
         </div>
     </div>
     
     <script>
-        const allJobs = Array.from(document.querySelectorAll('#jobs-body tr'));
+        const allJobs = {{.JobsJSON}};
+        
+        // Load applied jobs from localStorage and update statuses
+        (function initializeAppliedJobs() {
+            const appliedJobs = JSON.parse(localStorage.getItem('appliedJobs') || '{}');
+            allJobs.forEach(job => {
+                if (appliedJobs[job.URL]) {
+                    job.Status = 'Applied';
+                }
+            });
+        })();
+        
+        document.getElementById('select-all').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('#levels input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+        });
+        
+        function resetFilters() {
+            document.getElementById('search').value = '';
+            document.getElementById('company').value = '';
+            document.getElementById('location').value = '';
+            document.getElementById('status').value = '';
+            document.getElementById('select-all').checked = true;
+            document.querySelectorAll('#levels input[type="checkbox"]').forEach(cb => cb.checked = true);
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('export-btn').style.display = 'none';
+        }
         
         function filterJobs() {
             const search = document.getElementById('search').value.toLowerCase();
@@ -210,83 +236,195 @@ const indexHTML = `<!DOCTYPE html>
             const location = document.getElementById('location').value;
             const status = document.getElementById('status').value;
             
-            let visibleCount = 0;
-            let notAppliedCount = 0;
-            let appliedCount = 0;
-            
-            allJobs.forEach(row => {
-                const title = row.dataset.title.toLowerCase();
-                const rowCompany = row.dataset.company;
-                const rowLocation = row.dataset.location;
-                const rowLevels = row.dataset.levels.toLowerCase();
-                const rowStatus = row.dataset.status;
-                
-                let show = true;
-                
+            let filtered = allJobs.filter(job => {
                 // Search filter
-                if (search && !title.includes(search) && !rowCompany.toLowerCase().includes(search) && !rowLocation.toLowerCase().includes(search)) {
-                    show = false;
+                if (search) {
+                    const searchable = (job.Title + ' ' + job.Company + ' ' + job.Location).toLowerCase();
+                    if (!searchable.includes(search)) return false;
                 }
                 
                 // Level filter
                 if (selectedLevels.length > 0) {
-                    const matchesLevel = selectedLevels.some(level => rowLevels.includes(level));
-                    if (!matchesLevel) show = false;
+                    const jobLevels = job.Levels.toLowerCase();
+                    const matchesLevel = selectedLevels.some(level => jobLevels.includes(level));
+                    if (!matchesLevel) return false;
                 }
                 
                 // Company filter
-                if (company && rowCompany !== company) show = false;
+                if (company && job.Company !== company) return false;
                 
                 // Location filter
-                if (location && rowLocation !== location) show = false;
+                if (location && job.Location !== location) return false;
                 
                 // Status filter
-                if (status && rowStatus !== status) show = false;
+                if (status && job.Status !== status) return false;
                 
-                row.style.display = show ? '' : 'none';
-                
-                if (show) {
-                    visibleCount++;
-                    if (rowStatus === 'Not Applied') notAppliedCount++;
-                    else appliedCount++;
-                }
+                return true;
             });
             
-            document.getElementById('total-jobs').textContent = visibleCount;
-            document.getElementById('not-applied').textContent = notAppliedCount;
-            document.getElementById('applied').textContent = appliedCount;
+            displayResults(filtered);
+        }
+        
+        function displayResults(jobs) {
+            const resultsSection = document.getElementById('results');
+            const jobsList = document.getElementById('jobs-list');
+            const exportBtn = document.getElementById('export-btn');
+            
+            resultsSection.style.display = 'block';
+            exportBtn.style.display = jobs.length > 0 ? 'inline-block' : 'none';
+            
+            // Update stats
+            updateStats(jobs);
+            
+            // Display jobs
+            if (jobs.length === 0) {
+                jobsList.innerHTML = '<div class="no-results">No jobs match your filters. Try adjusting your criteria.</div>';
+                return;
+            }
+            
+            jobsList.innerHTML = jobs.map((job, index) => 
+                '<div class="job-item ' + (job.Status === 'Applied' ? 'status-applied' : '') + '" data-index="' + index + '">' +
+                    '<div class="job-info">' +
+                        '<div class="job-title">' + escapeHtml(job.Title) + '</div>' +
+                        '<div class="job-meta">' +
+                            '<strong>' + escapeHtml(job.Company) + '</strong> &bull; ' + escapeHtml(job.Location) + '<br>' +
+                            'Added: ' + new Date(job.DateAdded).toLocaleDateString() + ' &bull; Status: <span id="status-' + index + '">' + job.Status + '</span>' +
+                        '</div>' +
+                        '<span class="job-level">' + escapeHtml(job.Levels) + '</span>' +
+                    '</div>' +
+                    '<div class="job-actions">' +
+                        '<a href="' + escapeHtml(job.URL) + '" target="_blank" class="btn-apply">Apply &rarr;</a>' +
+                        (job.Status === 'Not Applied' 
+                            ? '<button class="btn-mark-applied" onclick="markApplied(' + index + ')">✓ Mark Applied</button>'
+                            : '<span class="applied-badge">✓ Applied</span>') +
+                    '</div>' +
+                '</div>'
+            ).join('');
+            
+            // Scroll to results
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        function markApplied(index) {
+            // Update the job status in memory
+            const currentFiltered = getCurrentFilteredJobs();
+            if (index < currentFiltered.length) {
+                const job = currentFiltered[index];
+                job.Status = 'Applied';
+                
+                // Store in localStorage
+                const appliedJobs = JSON.parse(localStorage.getItem('appliedJobs') || '{}');
+                appliedJobs[job.URL] = true;
+                localStorage.setItem('appliedJobs', JSON.stringify(appliedJobs));
+                
+                // Update the display
+                const statusSpan = document.getElementById('status-' + index);
+                if (statusSpan) statusSpan.textContent = 'Applied';
+                
+                const jobItem = document.querySelector('[data-index="' + index + '"]');
+                if (jobItem) {
+                    jobItem.classList.add('status-applied');
+                    const actionsDiv = jobItem.querySelector('.job-actions');
+                    const markBtn = actionsDiv.querySelector('.btn-mark-applied');
+                    if (markBtn) {
+                        markBtn.outerHTML = '<span class="applied-badge">✓ Applied</span>';
+                    }
+                }
+                
+                // Update stats
+                updateStats(currentFiltered);
+            }
+        }
+        
+        function getCurrentFilteredJobs() {
+            const search = document.getElementById('search').value.toLowerCase();
+            const selectedLevels = Array.from(document.querySelectorAll('#levels input:checked')).map(cb => cb.value.toLowerCase());
+            const company = document.getElementById('company').value;
+            const location = document.getElementById('location').value;
+            const status = document.getElementById('status').value;
+            
+            return allJobs.filter(job => {
+                if (search) {
+                    const searchable = (job.Title + ' ' + job.Company + ' ' + job.Location).toLowerCase();
+                    if (!searchable.includes(search)) return false;
+                }
+                if (selectedLevels.length > 0) {
+                    const jobLevels = job.Levels.toLowerCase();
+                    const matchesLevel = selectedLevels.some(level => jobLevels.includes(level));
+                    if (!matchesLevel) return false;
+                }
+                if (company && job.Company !== company) return false;
+                if (location && job.Location !== location) return false;
+                if (status && job.Status !== status) return false;
+                return true;
+            });
+        }
+        
+        function updateStats(jobs) {
+            const notApplied = jobs.filter(j => j.Status === 'Not Applied').length;
+            const applied = jobs.filter(j => j.Status === 'Applied').length;
+            
+            document.getElementById('filtered-count').textContent = jobs.length;
+            document.getElementById('not-applied-count').textContent = notApplied;
+            document.getElementById('applied-count').textContent = applied;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
         
         function exportCSV() {
-            const visibleRows = allJobs.filter(row => row.style.display !== 'none');
-            let csv = 'Date,Company,Title,Location,Level,Status,URL\n';
+            const search = document.getElementById('search').value.toLowerCase();
+            const selectedLevels = Array.from(document.querySelectorAll('#levels input:checked')).map(cb => cb.value.toLowerCase());
+            const company = document.getElementById('company').value;
+            const location = document.getElementById('location').value;
+            const status = document.getElementById('status').value;
             
-            visibleRows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                const url = row.querySelector('a').href;
-                const rowData = [
-                    cells[0].textContent,
-                    cells[1].textContent,
-                    cells[2].textContent,
-                    cells[3].textContent,
-                    cells[4].textContent,
-                    cells[5].textContent,
-                    url
-                ].map(field => '"' + field.replace(/"/g, '""') + '"');
-                csv += rowData.join(',') + '\n';
+            let filtered = allJobs.filter(job => {
+                if (search) {
+                    const searchable = (job.Title + ' ' + job.Company + ' ' + job.Location).toLowerCase();
+                    if (!searchable.includes(search)) return false;
+                }
+                if (selectedLevels.length > 0) {
+                    const jobLevels = job.Levels.toLowerCase();
+                    const matchesLevel = selectedLevels.some(level => jobLevels.includes(level));
+                    if (!matchesLevel) return false;
+                }
+                if (company && job.Company !== company) return false;
+                if (location && job.Location !== location) return false;
+                if (status && job.Status !== status) return false;
+                return true;
+            });
+            
+            let csv = 'Date,Company,Title,Location,Level,Status,URL\n';
+            filtered.forEach(job => {
+                const row = [
+                    new Date(job.DateAdded).toLocaleDateString(),
+                    job.Company,
+                    job.Title,
+                    job.Location,
+                    job.Levels,
+                    job.Status,
+                    job.URL
+                ].map(field => '"' + String(field).replace(/"/g, '""') + '"');
+                csv += row.join(',') + '\n';
             });
             
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'job_applications.csv';
+            a.download = 'filtered_jobs.csv';
             a.click();
             window.URL.revokeObjectURL(url);
         }
         
-        // Initialize
-        filterJobs();
+        // Allow Enter key to trigger search
+        document.getElementById('search').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') filterJobs();
+        });
     </script>
 </body>
 </html>`
@@ -383,6 +521,12 @@ func main() {
 	// Generate index.html
 	tmpl := template.Must(template.New("index").Parse(indexHTML))
 
+	// Convert jobs to JSON for client-side filtering
+	jobsJSON, err := json.Marshal(jobs)
+	if err != nil {
+		logger.Fatal("marshal jobs json: %v", err)
+	}
+
 	data := struct {
 		Jobs       []JobWithLevels
 		Levels     []string
@@ -391,6 +535,7 @@ func main() {
 		TotalJobs  int
 		NotApplied int
 		Applied    int
+		JobsJSON   template.JS
 	}{
 		Jobs:       jobs,
 		Levels:     levels,
@@ -399,6 +544,7 @@ func main() {
 		TotalJobs:  len(jobs),
 		NotApplied: notApplied,
 		Applied:    applied,
+		JobsJSON:   template.JS(jobsJSON),
 	}
 
 	if err := os.MkdirAll(*outDir, 0755); err != nil {
@@ -419,8 +565,8 @@ func main() {
 	logger.Info("Generated static site in %s", *outDir)
 
 	// Also export jobs.json for API access
-	jobsJSON := filepath.Join(*outDir, "jobs.json")
-	jf, err := os.Create(jobsJSON)
+	jobsJSONPath := filepath.Join(*outDir, "jobs.json")
+	jf, err := os.Create(jobsJSONPath)
 	if err != nil {
 		logger.Fatal("create jobs.json: %v", err)
 	}
