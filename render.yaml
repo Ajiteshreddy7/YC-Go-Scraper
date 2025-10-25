@@ -17,7 +17,6 @@ services:
   - type: cron
     name: yc-go-scraper-cron
     env: docker
-    plan: free
     rootDir: ./go-scraper
     dockerfilePath: ./go-scraper/Dockerfile
     schedule: "0 3 * * *" # daily at 03:00 UTC
