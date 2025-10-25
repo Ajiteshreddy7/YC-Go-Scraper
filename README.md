@@ -1,32 +1,40 @@
-# YC-Go-Scraper (Go-only)
+# YC-Go-Scraper
 
-An intelligent job scraper written in Go that discovers early‑career roles from Greenhouse boards, stores them in Postgres, exports CSV, and serves a simple web dashboard.
+An intelligent job scraper written in Go that discovers early‑career roles from Greenhouse boards, stores them in SQLite, exports CSV, and serves a static dashboard via GitHub Pages.
 
 ## Features
 
 - Smart scraping via Greenhouse API
 - Early‑career filtering (intern, new grad, junior) and US‑location bias
-- PostgreSQL storage with de‑duplication on URL
+- SQLite storage with de‑duplication on URL
 - CSV export to `data/job_applications.csv`
-- Web dashboard on http://localhost:8080
-- Docker Compose for Postgres, scraper, and dashboard
-- Structured logging with configurable level (LOG_LEVEL)
-- JSON API: `/api/jobs` with pagination and status filter
+- Static website generation for GitHub Pages
+- Automated daily scraping via GitHub Actions
+- 100% free hosting (no credit card required)
 
-## Quick start (Docker)
+## Live Dashboard
+
+Visit the live dashboard at: **https://ajiteshreddy7.github.io/YC-Go-Scraper/**
+
+Updates automatically every day at 3 AM UTC.
+
+## Quick start (Local)
 
 ```powershell
 # From repo root
-docker compose up -d
+cd go-scraper
 
-# View scraper logs
-docker logs yc-go-scraper-scraper-1 -f
+# Run scraper
+go run ./cmd/scraper --config ../config/scraper_config.json
 
-# Open dashboard
-start http://localhost:8080
+# Generate static site
+go run ./cmd/static-site --out ../public
+
+# View locally (open public/index.html in browser)
+start ../public/index.html
 ```
 
-CSV is written to `data/job_applications.csv` on the host.
+The SQLite database is stored at `data/jobs.db` and CSV at `data/job_applications.csv`.
 
 ## Configuration
 
@@ -42,50 +50,50 @@ Edit `config/scraper_config.json`:
 
 Environment variables:
 
-- `POSTGRES_URL` (optional) override for database connection; defaults to local.
+- `DB_PATH` (optional) override for SQLite database path; defaults to `data/jobs.db`.
 - `LOG_LEVEL` one of `DEBUG, INFO, WARN, ERROR` (default `INFO`).
+
+## GitHub Pages Deployment
+
+The repository is configured to automatically:
+1. Run the scraper daily at 3 AM UTC
+2. Generate a static website
+3. Deploy to GitHub Pages
+
+### Enable GitHub Pages:
+1. Go to your repo Settings → Pages
+2. Source: "GitHub Actions"
+3. The site will be available at: `https://yourusername.github.io/YC-Go-Scraper/`
+
+### Manual trigger:
+- Go to Actions tab → "Deploy to GitHub Pages" → "Run workflow"
 
 ## JSON API
 
-The dashboard service also exposes a JSON endpoint for integrations:
+The static site also generates a `jobs.json` file available at:
+- `https://ajiteshreddy7.github.io/YC-Go-Scraper/jobs.json`
 
-- GET `/api/jobs?page=1&page_size=50&status=Applied|Not%20Applied`
-
-Response shape:
-
-```json
-{
-  "page": 1,
-  "page_size": 50,
-  "total": 382,
-  "total_pages": 8,
-  "items": [
-    {
-      "ID": 123,
-      "Title": "Software Engineer",
-      "Company": "Stripe",
-      "Location": "San Francisco, CA, United States",
-      "Type": "Engineering",
-      "URL": "https://boards.greenhouse.io/...",
-      "DateAdded": "2025-10-25T12:34:56Z",
-      "Status": "Not Applied"
-    }
-  ]
-}
-```
+This contains all job data in JSON format for programmatic access.
 
 ## Local development
 
 ```powershell
-# Start only Postgres
-docker compose up -d db
-
-# Run scraper (inside module)
+# Start from go-scraper directory
 cd go-scraper
-go run ./cmd/scraper --config ../config/scraper_config.json
 
-# Run dashboard
-go run ./cmd/dashboard --port 8080
+# Build all commands
+go build ./cmd/scraper
+go build ./cmd/static-site
+go build ./cmd/dashboard  # Optional: for local API server
+
+# Run scraper
+$env:DB_PATH="data/jobs.db"; ./scraper --config ../config/scraper_config.json
+
+# Generate static site
+$env:DB_PATH="data/jobs.db"; ./static-site --out ../public
+
+# Optional: Run dashboard server locally
+$env:DB_PATH="data/jobs.db"; ./dashboard --port 8080
 
 # Tests
 go test ./...
@@ -97,19 +105,22 @@ go test ./...
 YC-Go-Scraper/
 ├─ go-scraper/
 │  ├─ cmd/
-│  │  ├─ scraper/     # CLI scraper entrypoint
-│  │  └─ dashboard/   # Web dashboard entrypoint
+│  │  ├─ scraper/      # CLI scraper entrypoint
+│  │  ├─ static-site/  # Static site generator for GitHub Pages
+│  │  └─ dashboard/    # Optional: local API server
 │  ├─ internal/
-│  │  ├─ db/          # Postgres layer
-│  │  ├─ scraper/     # Greenhouse scraper and filters
-│  │  ├─ exporter/    # CSV exporter
-│  │  └─ logger/      # Structured logging
-│  ├─ Dockerfile
-│  └─ Dockerfile.dashboard
+│  │  ├─ db/           # SQLite layer
+│  │  ├─ scraper/      # Greenhouse scraper and filters
+│  │  ├─ exporter/     # CSV exporter
+│  │  └─ logger/       # Structured logging
+│  ├─ go.mod
+│  └─ go.sum
 ├─ config/
 │  └─ scraper_config.json
-├─ data/               # CSV output folder
-└─ docker-compose.yml
+├─ data/                # SQLite DB and CSV output
+├─ public/              # Generated static site
+└─ .github/workflows/
+   └─ deploy-pages.yml  # Automated scraping and deployment
 ```
 
 ## License

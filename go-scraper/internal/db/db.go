@@ -3,21 +3,29 @@ package db
 import (
 	"database/sql"
 	"os"
+	"path/filepath"
 
-	_ "github.com/lib/pq"
+	_ "modernc.org/sqlite"
 )
 
 type DB struct {
 	Conn *sql.DB
 }
 
-// Connect opens a Postgres connection using POSTGRES_URL env var or default
+// Connect opens a SQLite connection using DB_PATH env var or default
 func Connect() (*DB, error) {
-	dsn := os.Getenv("POSTGRES_URL")
-	if dsn == "" {
-		dsn = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "data/jobs.db"
 	}
-	conn, err := sql.Open("postgres", dsn)
+
+	// Create data directory if it doesn't exist
+	dir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, err
+	}
+
+	conn, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
 	}
@@ -35,14 +43,14 @@ func (d *DB) Close() error {
 func (d *DB) CreateSchema() error {
 	q := `
     CREATE TABLE IF NOT EXISTS job_applications (
-        id SERIAL PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
         company TEXT,
         location TEXT,
         salary TEXT,
         type TEXT,
         url TEXT UNIQUE,
-        date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
         status TEXT DEFAULT 'Not Applied'
     );
     `
