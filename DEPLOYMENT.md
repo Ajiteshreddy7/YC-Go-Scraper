@@ -18,49 +18,83 @@ git commit -m "feat: Complete Go migration with interactive dashboard and filter
 git push origin main
 ```
 
-## Deploy on Railway.app (Free & Easy)
+## Recommended: Render (web) + Neon (DB) + GitHub Actions (scraper)
 
-Railway automatically detects Docker Compose and deploys all services.
+This combo is the most “free-and-stable” setup:
 
-### Steps:
+- Render (free) hosts the Go dashboard as a web service.
+- Neon (free) provides a managed Postgres with persistent storage.
+- GitHub Actions (free) runs the scraper on a schedule.
 
-1. **Sign up**: Go to [railway.app](https://railway.app) and sign in with GitHub
+### 1) Create a Neon Postgres database (free)
 
-2. **New Project**: Click "New Project" → "Deploy from GitHub repo"
+1. Go to https://neon.tech and sign in.
+2. Create a new project → copy the connection string (e.g., postgres://user:pass@host/db?sslmode=require).
+3. Add an IP allow rule if required by your Neon project.
 
-3. **Select repo**: Choose `YC-Go-Scraper`
+You’ll use this as `POSTGRES_URL` in both Render and GitHub Actions.
 
-4. **Railway auto-detects** your `docker-compose.yml` and creates:
-   - Postgres service (db)
-   - Scraper service
-   - Dashboard service (publicly accessible)
+### 2) Deploy dashboard to Render (free)
 
-5. **Set environment variables** (Railway dashboard → service → Variables):
-   - `LOG_LEVEL`: `INFO` (optional)
-   - Railway automatically handles `POSTGRES_URL` between services
+1. Go to https://render.com and sign in with GitHub.
+2. Click “New” → “Blueprint” → select this repo.
+3. Render will detect `render.yaml` and create:
+    - Web service: yc-go-dashboard (Dockerfile.dashboard)
+    - Cron job: yc-go-scraper-cron (Dockerfile)
+4. After services are created, open each service → Environment → set variables:
+    - `POSTGRES_URL` = your Neon connection string
+    - `LOG_LEVEL` = INFO (optional)
+5. For the web service, open Settings → Generate public URL.
 
-6. **Get public URL**:
-   - Click on the dashboard service
-   - Under "Settings" → "Networking" → "Generate Domain"
-   - Your dashboard will be live at `https://your-app.up.railway.app`
+Note: If Cron requires enabling, open the cron job service in Render and ensure the schedule is active.
 
-### Cost:
-- **Free tier**: $5 credit/month (enough for this app)
-- Postgres included
+### 3) (Option B) Use GitHub Actions scheduler instead of Render cron
 
-## Alternative: Render.com (Also Free)
+If you prefer to run the scraper via GitHub Actions on a schedule:
 
-Similar process to Railway:
+1. In your GitHub repo, go to Settings → Secrets and variables → Actions → New repository secret:
+    - Name: `POSTGRES_URL`
+    - Value: your Neon connection string
+2. Add a workflow `.github/workflows/scheduled-scrape.yml` with:
 
-1. Go to [render.com](https://render.com) → Sign in with GitHub
-2. "New" → "Blueprint" → Select your repo
-3. Render reads `docker-compose.yml` automatically
-4. Deploy takes ~5-10 minutes
-5. Dashboard URL: `https://your-app.onrender.com`
+```yaml
+name: Scheduled Scrape
 
-### Free tier:
-- Postgres: Free 90 days, then $7/month
-- Web services: Free (sleeps after 15min inactivity)
+on:
+   schedule:
+      - cron: "0 3 * * *"  # daily at 03:00 UTC
+   workflow_dispatch:
+
+jobs:
+   scrape:
+      runs-on: ubuntu-latest
+      defaults:
+         run:
+            working-directory: go-scraper
+      steps:
+         - uses: actions/checkout@v4
+         - uses: actions/setup-go@v5
+            with:
+               go-version: "1.21.x"
+         - name: Build scraper
+            run: go build ./cmd/scraper
+         - name: Run scraper
+            env:
+               POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+               LOG_LEVEL: INFO
+            run: ./scraper --config ../config/scraper_config.json --out ../data/job_applications.csv
+         - name: Upload CSV artifact
+            uses: actions/upload-artifact@v4
+            with:
+               name: job_applications.csv
+               path: data/job_applications.csv
+```
+
+Due to GitHub’s workflow permissions, if you see a push error for workflow files, create this workflow via the GitHub UI (Add file → Create new file).
+
+## Alternative: Railway (credit-based free tier)
+
+Railway can run everything via docker-compose, but persistent Postgres may consume credits. For purely free long-term deployments, prefer Neon for DB.
 
 ## Alternative: Fly.io
 
@@ -86,7 +120,7 @@ If deploying, consider setting:
 
 ```bash
 LOG_LEVEL=INFO
-POSTGRES_URL=<provided-by-platform>
+POSTGRES_URL=<neon_connection_string>
 ```
 
 ## Monitoring
